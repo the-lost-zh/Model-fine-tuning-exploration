@@ -29,11 +29,18 @@ pip install timm tqdm matplotlib seaborn pyyaml scikit-learn
 
 ### If HuggingFace is blocked (GFW)
 
+If you are behind the GFW, set proxy environment variables:
+
 ```bash
-export HF_ENDPOINT=https://hf-mirror.com
+export HTTP_PROXY=http://127.0.0.1:37890   # your proxy address
+export HTTPS_PROXY=http://127.0.0.1:37890
+export HF_ENDPOINT=https://hf-mirror.com     # optional, HF may be directly accessible
 ```
 
-Or download weights manually and pass `--pretrained_path /path/to/weights.pth`.
+SSL verification is automatically disabled in `main.py` only when a proxy is detected.
+If you have direct internet access, **no extra configuration is needed**.
+
+Alternatively, download weights manually and pass `--pretrained_path /path/to/weights.pth`.
 
 ### Datasets
 
@@ -48,6 +55,14 @@ d.StanfordCars(root='./data', split='train', download=True)
 "
 ```
 
+**Note**: StanfordCars original URL is broken. If automatic download fails, convert from HuggingFace parquet:
+```bash
+# Download parquet files and convert to torchvision format
+python scripts/convert_stanfordcars_v2.py
+```
+
+**Note**: CUB200 requires torchvision >= 0.21. If not available, the custom loader in `src/data/cub200.py` is used automatically.
+
 ## Usage
 
 ### Single experiment
@@ -57,6 +72,11 @@ python main.py --method ssf --dataset cub200 --seed 42
 python main.py --method lora --dataset flowers102 --lr 1e-3
 python main.py --method ssf_sparse --dataset cub200 --sparsity_lambda 1e-5
 ```
+
+### Important notes
+
+- **LoRA**: Default lr=5e-3 is too high for vision tasks. Use `--lr 1e-3` or `--lr 5e-4` for stable training across all datasets.
+- **SSF-Sparse**: Requires more GPU memory due to gating computations. Config uses `batch_size: 32` (vs 128 for other methods). No `--lr` override needed. Multi-GPU (DataParallel/DDP) is not supported by the current training code — reducing batch_size is the recommended workaround.
 
 ### Sample efficiency experiment
 
@@ -70,10 +90,16 @@ python main.py --exp sample_efficiency --method ssf --dataset cub200
 python main.py --exp layer_ablation --method ssf --dataset cub200
 ```
 
-### Run all experiments in parallel (3 GPUs)
+### Run all experiments in parallel
 
+Quick run (main experiments only, 3 GPUs):
 ```bash
 bash scripts/run_parallel.sh
+```
+
+Full run (all 3 experiments × 3 datasets × 7 methods = 99 jobs, 6 GPUs):
+```bash
+bash scripts/run_batch.sh
 ```
 
 ### Generate all figures

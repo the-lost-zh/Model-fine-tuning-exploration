@@ -8,8 +8,28 @@ Usage:
     python main.py --exp layer_ablation --method ssf --dataset cub200
 """
 
-import argparse
 import os
+import warnings
+warnings.filterwarnings("ignore")
+
+# Configure proxy and disable SSL verification for GFW environment.
+# NOTE: This disables SSL globally — only use in development behind a trusted proxy.
+_proxy_url = os.environ.get("HTTPS_PROXY", os.environ.get("https_proxy", ""))
+if _proxy_url:
+    os.environ.setdefault("HTTP_PROXY", _proxy_url)
+    os.environ.setdefault("HTTPS_PROXY", _proxy_url)
+
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+_original_session_request = requests.Session.request
+def _patched_request(self, method, url, **kwargs):
+    kwargs.setdefault("verify", False)
+    return _original_session_request(self, method, url, **kwargs)
+requests.Session.request = _patched_request
+
+import argparse
 import yaml
 import torch
 import random

@@ -27,7 +27,7 @@ methods:
     weight_decay: 1.0e-4
 
   lora:
-    lr: 5.0e-3
+    lr: 1.0e-3
     weight_decay: 1.0e-4
     lora_r: 8
     lora_alpha: 16.0
@@ -45,6 +45,7 @@ methods:
   ssf_sparse:
     lr: 5.0e-3
     weight_decay: 1.0e-4
+    batch_size: 32
     sparsity_lambda: 0.0  # start at 0 for warmup
     sparsity_target: 1.0e-5
     sparsity_warmup_epochs: 10

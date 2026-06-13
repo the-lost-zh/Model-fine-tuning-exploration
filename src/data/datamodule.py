@@ -12,13 +12,14 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader, Subset, random_split
 
 from .transforms import get_train_transforms, get_val_transforms
+from .cub200 import CUB200
 
 
 DATASET_CONFIGS = {
     "cub200": {
         "dir": "CUB_200_2011",
         "num_classes": 200,
-        "class_name": datasets.CUB200,
+        "class_name": CUB200,
     },
     "flowers102": {
         "dir": "Flowers102",
@@ -94,12 +95,13 @@ def build_dataloaders(dataset_name, data_root, batch_size=128, num_workers=8,
         )
     elif dataset_name == "stanford_cars":
         # StanfordCars: split="train"/"test"
+        # download URL is broken, data must be pre-downloaded
         full_train = config["class_name"](
-            root=data_root, split="train", download=True,
+            root=data_root, split="train", download=False,
             transform=train_transforms,
         )
         test_set = config["class_name"](
-            root=data_root, split="test", download=True,
+            root=data_root, split="test", download=False,
             transform=val_transforms,
         )
     else:
@@ -170,10 +172,10 @@ def get_subset_dataloader(dataset_name, data_root, fraction, batch_size=128,
         )
     elif dataset_name == "stanford_cars":
         full_train = config["class_name"](
-            root=data_root, split="train", download=True, transform=train_transforms,
+            root=data_root, split="train", download=False, transform=train_transforms,
         )
         test_set = config["class_name"](
-            root=data_root, split="test", download=True, transform=val_transforms,
+            root=data_root, split="test", download=False, transform=val_transforms,
         )
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
