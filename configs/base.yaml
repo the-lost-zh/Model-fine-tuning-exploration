@@ -1,0 +1,51 @@
+# Base training configuration (shared across all methods)
+model_name: "vit_base_patch16_224"
+pretrained: true
+input_size: 224
+batch_size: 128
+num_workers: 8
+epochs: 100
+patience: 10
+val_split: 0.2
+
+# Optimizer defaults
+lr: 5.0e-3
+weight_decay: 1.0e-4
+
+# Method-specific overrides (applied after base)
+methods:
+  full_ft:
+    lr: 5.0e-5
+    weight_decay: 1.0e-4
+
+  linear_probe:
+    lr: 1.0e-2
+    weight_decay: 0.0
+
+  bitfit:
+    lr: 5.0e-3
+    weight_decay: 1.0e-4
+
+  lora:
+    lr: 1.0e-3
+    weight_decay: 1.0e-4
+    lora_r: 8
+    lora_alpha: 16.0
+
+  ssf:
+    lr: 5.0e-3
+    weight_decay: 1.0e-4
+
+  adaptformer:
+    lr: 5.0e-3
+    weight_decay: 1.0e-4
+    d_hat: 64
+    adapt_scale: 0.1
+
+  ssf_sparse:
+    lr: 5.0e-3
+    weight_decay: 1.0e-4
+    batch_size: 32
+    sparsity_lambda: 0.0  # start at 0 for warmup
+    sparsity_target: 1.0e-5
+    sparsity_warmup_epochs: 10
