@@ -35,8 +35,8 @@ Although multiple PEFT methods have been proposed, systematic comparisons on vis
 
 The main contributions of this paper are:
 
-1. **Systematic comparison**: We benchmark 7 fine-tuning methods on 3 FGVC datasets across multiple dimensions (accuracy, parameter count, training time, GPU memory), revealing the performance ranking of PEFT methods on vision tasks.
-2. **SSF-Sparse innovation**: We propose gated SSF with L1 sparsity regularization, which learns per-channel sigmoid gates to automatically discover which channels require SSF modulation, providing layer-wise sparsity analysis without accuracy loss.
+1. **Systematic comparison**: We benchmark 8 fine-tuning methods on 3 FGVC datasets across multiple dimensions (accuracy, parameter count, training time, GPU memory), revealing the performance ranking of PEFT methods on vision tasks.
+2. **SSF-Sparse innovation**: We propose gated SSF with L1 sparsity regularization, which learns per-channel sigmoid gates to automatically discover which channels require SSF modulation, providing layer-wise sparsity analysis with negligible accuracy loss (â‰¤0.35%).
 3. **Gate-LoRA innovation**: We propose a gated LoRA + SSF hybrid module, where a single shared gate jointly controls both LoRA low-rank update and SSF channel modulation. Gate-LoRA achieves the best accuracy across all three datasets (86.85%/97.99%/76.78%) while using fewer parameters than applying LoRA and SSF independently.
 4. **Layer ablation analysis**: By selectively removing fine-tuning from specific layer groups, we characterize the adaptation contribution distribution across ViT layers for each method, providing guidance for PEFT method selection and design.
 
@@ -197,7 +197,7 @@ Table 1 presents test accuracy for all methods across the three datasets (mean Â
 
 ### 3.3 Sample Efficiency Analysis
 
-Figure 1 shows performance across different training data proportions (10%, 25%, 50%, 100%). Key observations:
+Performance across different training data proportions (10%, 25%, 50%, 100%) is shown below. Key observations:
 
 - **BitFit excels with extremely limited data**: At 10% training data, BitFit leads across all datasets, confirming the intuition that "tuning only biases is the safest small-sample strategy."
 - **LoRA and Gate-LoRA catch up at medium-to-high data levels**: Starting from 25%, low-rank adaptation methods begin to show their advantage.
@@ -221,6 +221,8 @@ By restricting PEFT to specific layer groups (early 1-4, middle 5-8, deep 9-12),
 | Early | 1-4 | 85.69 | **84.98** | 79.89 |
 | Middle | 5-8 | 85.55 | 82.90 | 79.88 |
 | Late | 9-12 | 85.24 | 83.05 | 76.35 |
+
+> Note: Table 2 results are from seed=42 only; small discrepancies with Table 1's 3-seed averages (e.g., LoRA All: 86.34% vs 86.39%) are expected.
 
 Key findings:
 
