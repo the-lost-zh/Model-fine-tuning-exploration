@@ -46,7 +46,7 @@ The main contributions of this paper are:
 
 ### 2.1 Pretrained Model
 
-We use ViT-B/16 (Vision Transformer Base, patch size 16) as the backbone. The model contains 12 Transformer blocks, hidden dimension 768, 12 attention heads, and approximately 86M total parameters. ImageNet-21K pretrained weights are loaded from the `timm` library.
+We use ViT-B/16 (Vision Transformer Base, patch size 16) as the backbone. The model contains 12 Transformer blocks, hidden dimension 768, 12 attention heads, and approximately 86M total parameters. ImageNet-21K pretrained weights are loaded from the `timm` library (model: `vit_base_patch16_224.augreg_in1k`).
 
 ### 2.2 Baseline Methods
 
@@ -236,9 +236,12 @@ Table 3 shows computational resource requirements:
 | Method | Training Time (CUB200) | GPU Memory | Inference Overhead |
 |--------|----------------------|------------|-------------------|
 | Full FT | ~180s | ~23GB | None |
+| Linear Probe | ~30s | ~4GB | None |
 | BitFit | ~80s | ~5GB | None |
 | LoRA | ~90s | ~8GB | None (mergeable) |
 | SSF | ~60s | ~14GB | None (re-parameterizable) |
+| AdaptFormer | ~70s | ~7GB | Minimal |
+| SSF-Sparse | ~65s | ~15GB | None |
 | Gate-LoRA | ~60s | ~3.5GB | None (mergeable) |
 
 Gate-LoRA not only achieves the best accuracy but also has the lowest GPU memory footprint (3.5GB with batch_size=32), making it suitable for resource-constrained scenarios.
@@ -281,6 +284,10 @@ Most importantly, our proposed Gate-LoRA fuses LoRA and SSF through a shared gat
 2. **Model scale**: Only tested ViT-B/16. The scalability of Gate-LoRA to larger models (ViT-L, ViT-H) requires further investigation.
 3. **Sparsity underutilized**: The sparsity analysis from SSF-Sparse and Gate-LoRA is currently observational; future work could explore sparsity-guided model pruning strategies.
 4. **Limited hybrid exploration**: Only LoRA+SSF combination was tested. Other combinations (e.g., BitFit+AdaptFormer) may also prove effective.
+
+### 4.3 Code Availability
+
+All code, experiment configurations, and result figures are open-sourced at: https://github.com/the-lost-zh/Model-fine-tuning-exploration
 
 ---
 
