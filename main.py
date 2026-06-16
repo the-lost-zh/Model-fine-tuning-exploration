@@ -41,6 +41,7 @@ from src.models.bitfit import apply_bitfit
 from src.models.ssf import apply_ssf
 from src.models.ssf_sparse import apply_ssf_sparse
 from src.models.adaptformer import apply_adaptformer
+from src.models.gate_lora import apply_gate_lora, collect_gate_lora_sparsity_loss
 from src.data.datamodule import build_dataloaders, get_subset_dataloader
 from src.trainers.base_trainer import train_model
 from src.trainers.metrics import param_summary
@@ -55,6 +56,7 @@ METHOD_APPLY = {
     "adaptformer": lambda m, cfg: apply_adaptformer(
         m, d_hat=cfg.get("d_hat", 64), scale=cfg.get("adapt_scale", 0.1)),
     "ssf_sparse": lambda m, cfg: apply_ssf_sparse(m),
+    "gate_lora": lambda m, cfg: apply_gate_lora(m, r=cfg.get("lora_r", 8), alpha=cfg.get("lora_alpha", 16.0)),
 }
 
 
@@ -294,6 +296,16 @@ def _apply_method_to_layers(model, method, cfg, layer_indices):
                 d_hat=cfg.get("d_hat", 64),
                 scale=cfg.get("adapt_scale", 0.1),
             )
+    elif method == "gate_lora":
+        freeze_all(model)
+        for idx in layer_indices:
+            from src.models.gate_lora import _replace_linear_with_gate_lora
+            block = model.blocks[idx]
+            _replace_linear_with_gate_lora(
+                block.attn, r=cfg.get("lora_r", 8),
+                alpha=cfg.get("lora_alpha", 16.0),
+                target_prefixes=["qkv", "proj"],
+            )
     elif method == "bitfit":
         freeze_all(model)
         for idx in layer_indices:
@@ -312,7 +324,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", type=str, required=True,
                         choices=["full_ft", "linear_probe", "bitfit", "lora",
-                                 "ssf", "adaptformer", "ssf_sparse"])
+                                 "ssf", "adaptformer", "ssf_sparse", "gate_lora"])
     parser.add_argument("--dataset", type=str, required=True,
                         choices=["cub200", "flowers102", "stanford_cars"])
     parser.add_argument("--data_root", type=str, default="./data")

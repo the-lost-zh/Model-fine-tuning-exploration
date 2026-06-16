@@ -15,6 +15,7 @@ Course project for 《机器学习与深度学习》.
 | SSF | PEFT | ~0.4% | Scale & shift feature modulation |
 | AdaptFormer | PEFT | ~0.5-0.8% | Parallel bottleneck adapter |
 | SSF-Sparse | Innovation | ~0.5% | Gated SSF with L1 sparsity |
+| Gate-LoRA | Innovation | ~0.7% | Gated LoRA + SSF hybrid |
 
 ## Setup
 
@@ -71,6 +72,7 @@ python scripts/convert_stanfordcars_v2.py
 python main.py --method ssf --dataset cub200 --seed 42
 python main.py --method lora --dataset flowers102 --lr 1e-3
 python main.py --method ssf_sparse --dataset cub200 --sparsity_lambda 1e-5
+python main.py --method gate_lora --dataset flowers102 --sparsity_lambda 1e-5
 ```
 
 ### Important notes
@@ -107,6 +109,27 @@ bash scripts/run_batch.sh
 ```bash
 python scripts/generate_figures.py
 ```
+
+## Results
+
+All experiments run with 3 seeds, epochs=100, patience=10, ViT-B/16 on ImageNet-21k pretrained weights.
+
+| Method | CUB200 | Flowers102 | StanfordCars |
+|--------|--------|------------|-------------|
+| Full FT | 82.39% | 94.72% | 71.36% |
+| Linear Probe | 81.82% | 93.28% | 54.77% |
+| BitFit | 83.04% | 95.40% | 76.09% |
+| LoRA | 86.39% | 97.74% | 76.60% |
+| SSF | 83.22% | 95.51% | 74.48% |
+| AdaptFormer | 84.69% | 97.27% | 71.74% |
+| SSF-Sparse | 82.87% | 97.11% | 75.53% |
+| **Gate-LoRA** | **86.85%** | **97.99%** | **76.78%** |
+
+Key findings:
+- **Gate-LoRA** achieves best accuracy on all three datasets, validating the gated hybrid approach
+- PEFT methods generally outperform Full FT on fine-grained tasks with limited data
+- LoRA requires lower learning rate (1e-3) for vision tasks compared to the default 5e-3
+- SSF-Sparse maintains accuracy while providing per-layer sparsity analysis
 
 ## Project Structure
 

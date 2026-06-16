@@ -83,11 +83,12 @@ def evaluate(model, loader, criterion, device):
 
 
 def _collect_sparsity_loss(model):
-    """Collect L1 sparsity loss from SparseScaleShift modules."""
+    """Collect L1 sparsity loss from SparseScaleShift and GateLoRALinear modules."""
     total = 0.0
     from ..models.ssf_sparse import SparseScaleShift
+    from ..models.gate_lora import GateLoRALinear
     for m in model.modules():
-        if isinstance(m, SparseScaleShift):
+        if isinstance(m, (SparseScaleShift, GateLoRALinear)):
             total += m.sparsity_loss()
     return total
 
