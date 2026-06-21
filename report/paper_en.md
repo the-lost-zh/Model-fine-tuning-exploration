@@ -6,7 +6,7 @@
 
 ## Abstract
 
-The pretrain-then-finetune paradigm has become the dominant approach in computer vision, but full fine-tuning's computational cost grows prohibitive as model scale increases. Parameter-Efficient Fine-Tuning (PEFT) methods achieve comparable or superior performance while training only a tiny fraction of parameters. This paper systematically compares eight fine-tuning methods on ViT-B/16: Full Fine-tuning, Linear Probe, BitFit, LoRA, SSF, AdaptFormer, and two proposed innovations—SSF-Sparse (gated SSF with L1 sparsity) and Gate-LoRA (gated LoRA + SSF hybrid). Experiments on three fine-grained visual classification datasets (CUB-200-2011, Oxford Flowers-102, Stanford Cars) demonstrate that: (1) PEFT methods generally outperform full fine-tuning on small datasets; (2) LoRA requires a lower learning rate (1e-3 vs. default 5e-3) for vision tasks; (3) Gate-LoRA achieves the best accuracy across all three datasets (CUB200: 86.85%, Flowers102: 97.99%, StanfordCars: 76.78%), validating the shared-gating hybrid design. Sample efficiency and layer ablation experiments further characterize the adaptation behavior of each method.
+The pretrain-then-finetune paradigm has become the dominant approach in computer vision, but full fine-tuning's computational cost grows prohibitive as model scale increases. Parameter-Efficient Fine-Tuning (PEFT) methods achieve comparable or superior performance while training only a tiny fraction of parameters. To systematically determine which PEFT strategy (weight-space adaptation, feature-space adaptation, or architecture injection) is most effective for fine-grained visual classification, and whether gating mechanisms can further improve performance, this paper systematically compares eight fine-tuning methods on ViT-B/16: Full Fine-tuning, Linear Probe, BitFit, LoRA, SSF, AdaptFormer, and two proposed innovations—SSF-Sparse (gated SSF with L1 sparsity) and Gate-LoRA (gated LoRA + SSF hybrid). Experiments on three fine-grained visual classification datasets (CUB-200-2011, Oxford Flowers-102, Stanford Cars) demonstrate that: (1) PEFT methods generally outperform full fine-tuning on small datasets; (2) LoRA requires a lower learning rate (1e-3 vs. default 5e-3) for vision tasks; (3) Gate-LoRA achieves the best accuracy across all three datasets (CUB200: 86.85%, Flowers102: 97.99%, StanfordCars: 76.78%), validating the shared-gating hybrid design. Sample efficiency and layer ablation experiments further characterize the adaptation behavior of each method.
 
 **Keywords**: Parameter-Efficient Fine-Tuning; Vision Transformer; LoRA; SSF; Gating Mechanism; Fine-Grained Visual Classification
 
@@ -22,7 +22,19 @@ In the typical pretrain-then-finetune paradigm, models are first pretrained on l
 
 Parameter-Efficient Fine-Tuning (PEFT) methods address this problem by training only a small subset of model parameters while keeping the pretrained backbone frozen. Current PEFT approaches can be categorized into three families: (1) **weight-space adaptation** — adjusting weight matrices via low-rank decomposition (LoRA) or bias terms (BitFit); (2) **feature-space adaptation** — modulating intermediate representations through scaling and shifting (SSF); (3) **architecture injection** — inserting lightweight adapter modules (AdaptFormer).
 
-### 1.2 Motivation and Research Questions
+### 1.2 Related Work
+
+In recent years, multiple PEFT methods have achieved remarkable success in NLP and are increasingly being applied to vision tasks.
+
+**Weight-space adaptation.** BitFit (Zaken et al., 2022) demonstrated that fine-tuning only the bias terms of a Transformer achieves over 90% of full fine-tuning performance on the GLUE benchmark, yet its effectiveness on vision tasks remains unverified. LoRA (Hu et al., 2022) decomposes weight updates into the product of two low-rank matrices, achieving great success in LLM fine-tuning with zero inference overhead through weight merging. However, its optimal hyperparameters (e.g., learning rate 5e-3) were designed for NLP, and their suitability for vision tasks lacks independent evaluation—a gap this paper addresses directly.
+
+**Feature-space adaptation.** SSF (Lian et al., 2022) inserts learnable scale and shift parameters after each ViT operation, surpassing full fine-tuning on multiple vision benchmarks including CUB200, with zero inference overhead via re-parameterization. However, SSF applies uniform modulation strength to all channels, ignoring inter-channel variation in adaptation needs—an observation that directly motivates our SSF-Sparse design.
+
+**Architecture injection.** AdaptFormer (Chen et al., 2022) inserts a parallel bottleneck adapter alongside the ViT MLP block, achieving leading performance on video action recognition tasks. Its performance on fine-grained image classification, however, remains underexplored.
+
+In summary, three gaps exist in the current literature. First, most PEFT comparisons are confined to NLP benchmarks or single vision datasets, lacking systematic cross-dataset, multi-method evaluation. Second, existing methods apply uniform modulation across all adaptation positions, without analyzing adaptation demand distribution at either channel granularity or layer granularity. Third, the complementarity between different PEFT strategies (weight-space, feature-space, architecture injection) remains unexplored—different strategies may excel at different network depths, yet no existing work studies hybrid approaches.
+
+### 1.3 Research Questions
 
 Although multiple PEFT methods have been proposed, systematic comparisons on vision tasks remain limited. Most PEFT methods were originally designed for NLP, and their applicability to fine-grained visual classification (FGVC) tasks lacks comprehensive evaluation. Specifically, this paper addresses the following questions:
 
@@ -31,7 +43,7 @@ Although multiple PEFT methods have been proposed, systematic comparisons on vis
 3. Are all ViT layers equally important for fine-tuning, or do certain layers dominate?
 4. Can a shared gating mechanism jointly control multiple PEFT strategies, improving both accuracy and parameter efficiency?
 
-### 1.3 Contributions
+### 1.4 Contributions
 
 The main contributions of this paper are:
 
