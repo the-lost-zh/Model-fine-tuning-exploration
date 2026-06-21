@@ -181,13 +181,17 @@ We use three classic fine-grained visual classification datasets:
 
 | Dataset | Classes | Train | Test | Characteristics |
 |---------|---------|-------|------|-----------------|
-| CUB-200-2011 | 200 | 5,994 | 5,794 | Standard FGVC bird benchmark |
-| Oxford Flowers-102 | 102 | 1,020 | 6,149 | Extremely small training set |
-| Stanford Cars | 196 | 8,144 | 8,041 | Car model recognition, many classes |
+| CUB-200-2011 [7] | 200 | 5,994 | 5,794 | Standard FGVC bird benchmark |
+| Oxford Flowers-102 [8] | 102 | 1,020 | 6,149 | Extremely small training set |
+| Stanford Cars [9] | 196 | 8,144 | 8,041 | Car model recognition, many classes |
 
-All images are resized to 224×224 and normalized using ImageNet mean and standard deviation.
+All images are resized to 224×224 and normalized using ImageNet mean and standard deviation. CUB-200-2011 and Stanford Cars use their official train/test splits; Flowers-102 merges the official training and validation sets into a combined training set. The three datasets span a wide range of training data sizes (1,020–8,144 images), enabling evaluation under extremely small-sample, medium-sample, and regular-sample conditions.
 
-### 3.2 Main Results
+### 3.2 Experimental Platform and Setup
+
+All experiments were conducted on a server equipped with 8× NVIDIA RTX 4090 GPUs (24GB each), with each experiment running on a single GPU isolated via `CUDA_VISIBLE_DEVICES`. The software environment comprises Python 3.12, PyTorch 2.5.1 (CUDA 12.4), torchvision 0.20.1, and timm 0.9+. ViT-B/16 pretrained weights are loaded from HuggingFace Hub (model: `vit_base_patch16_224.augreg_in1k`), pretrained on ImageNet-21K. Training uses the AdamW optimizer, with individual experiments taking approximately 30 seconds to 3 minutes depending on method and dataset (CUB200 as reference). All results are reported as mean ± standard deviation over 3 random seeds (42, 123, 456) to assess statistical significance. Complete code and experiment configurations are open-sourced on GitHub (see §4.3).
+
+### 3.3 Main Results
 
 Table 1 presents test accuracy for all methods across the three datasets (mean ± std of 3 random seeds).
 
@@ -224,7 +228,7 @@ Table 1 presents test accuracy for all methods across the three datasets (mean �
 
 5. **StanfordCars is the hardest dataset**: All methods achieve below 80% accuracy on StanfordCars, with its 196 fine-grained car classes posing a significant challenge for all approaches.
 
-### 3.3 Sample Efficiency Analysis
+### 3.4 Sample Efficiency Analysis
 
 Performance across different training data proportions (10%, 25%, 50%, 100%) is shown below. Key observations:
 
@@ -238,7 +242,7 @@ Performance across different training data proportions (10%, 25%, 50%, 100%) is 
 
 ![StanfordCars Sample Efficiency](../results/figures/sample_efficiency_stanford_cars.png)
 
-### 3.4 Layer Ablation Analysis
+### 3.5 Layer Ablation Analysis
 
 By restricting PEFT to specific layer groups (early 1-4, middle 5-8, deep 9-12), we analyze each layer group's adaptation contribution. Table 2 shows Gate-LoRA's layer ablation results on CUB200.
 
@@ -260,7 +264,7 @@ Key findings:
 - **LoRA depends heavily on deep layers**: LoRA drops to 79.89% when restricted to early layers (vs 86.34% all-layer), indicating that low-rank weight updates are most critical in higher semantic layers.
 - **Complementarity supports Gate-LoRA design**: SSF performs better in shallow layers (feature normalization) while LoRA excels in deep layers (semantic adaptation). Gate-LoRA's shared gating fuses both strengths, achieving the highest accuracy across all layer groups.
 
-### 3.5 Computational Efficiency
+### 3.6 Computational Efficiency
 
 Table 3 shows computational resource requirements:
 
@@ -283,7 +287,7 @@ Gate-LoRA not only achieves the best accuracy but also has the lowest GPU memory
 
 ![StanfordCars Compute Efficiency](../results/figures/compute_efficiency_stanford_cars.png)
 
-### 3.6 Sparsity Analysis (SSF-Sparse / Gate-LoRA)
+### 3.7 Sparsity Analysis (SSF-Sparse / Gate-LoRA)
 
 The gating mechanism in SSF-Sparse and Gate-LoRA provides an additional analytical dimension — by observing the gate value distribution, we can understand which channels and layers require the most modulation:
 
