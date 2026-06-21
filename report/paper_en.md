@@ -305,7 +305,9 @@ Sparsity analysis reveals significant variation in gate activations across diffe
 
 ### 4.1 Summary
 
-This paper systematically compared eight fine-tuning methods on ViT-B/16, including two innovations (SSF-Sparse and Gate-LoRA), completing 99 experiments across three FGVC datasets. The core findings are as follows.
+This work addresses the prohibitive cost of full fine-tuning Vision Transformers on downstream tasks by systematically comparing eight parameter-efficient fine-tuning methods and proposing two innovations. The significance of this work is threefold: (1) it provides the most comprehensive multi-method, multi-dataset benchmark for visual PEFT to date; (2) it reveals complementary specialization across network depth — SSF excels at shallow-layer feature normalization while LoRA dominates deep-layer semantic adaptation, providing theoretical grounding for future hybrid method design; (3) the proposed Gate-LoRA achieves the best accuracy across all three datasets through a shared-gating design, demonstrating the "less-is-more" philosophy — that clever architectural design outperforms naive parameter stacking.
+
+Completing 99 experiments on ViT-B/16, the core findings are as follows:
 
 First, PEFT methods consistently outperform full fine-tuning on fine-grained visual classification tasks, achieving comparable or superior accuracy with less than 1% of trainable parameters. This strongly supports the "frozen backbone + lightweight adaptation" paradigm for vision tasks.
 
@@ -315,10 +317,10 @@ Most importantly, our proposed Gate-LoRA fuses LoRA and SSF through a shared gat
 
 ### 4.2 Limitations and Future Work
 
-1. **Dataset scope**: Only validated on three FGVC datasets. Future work should test on more diverse tasks (object detection, semantic segmentation).
-2. **Model scale**: Only tested ViT-B/16. The scalability of Gate-LoRA to larger models (ViT-L, ViT-H) requires further investigation.
-3. **Sparsity underutilized**: The sparsity analysis from SSF-Sparse and Gate-LoRA is currently observational; future work could explore sparsity-guided model pruning strategies.
-4. **Limited hybrid exploration**: Only LoRA+SSF combination was tested. Other combinations (e.g., BitFit+AdaptFormer) may also prove effective.
+1. **Dataset scope**: Limited to three FGVC datasets, as FGVC represents a typical scenario for evaluating PEFT methods' fine-grained discriminative capability. Future work should test generalization on more diverse tasks (object detection, semantic segmentation).
+2. **Model scale**: Limited to ViT-B/16 (86M parameters) because full fine-tuning of ViT-Large (307M) exceeds GPU memory on 8×RTX 4090. Gate-LoRA's scalability to larger models requires further investigation.
+3. **Sparsity underutilized**: The sparsity analysis is currently observational because quantifying the sparsity-accuracy relationship demands large-scale λ-sweep experiments. Future work could explore sparsity-guided model pruning.
+4. **Limited hybrid exploration**: Only LoRA+SSF was tested; other combinations such as BitFit+AdaptFormer may exhibit more complex synergistic effects worthy of systematic exploration.
 
 ### 4.3 Code Availability
 
