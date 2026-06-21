@@ -65,6 +65,8 @@ Transformer架构自提出以来，已成为自然语言处理（NLP）和计算
 
 ### 2.1 预训练模型
 
+![ViT架构与PEFT方法插入位置](../results/figures/architecture_overview.png)
+
 本文采用ViT-B/16（Vision Transformer Base, patch size 16）作为基础模型。该模型包含12层Transformer blocks，隐藏维度768，12个注意力头，总参数量约86M。使用ImageNet-21K预训练权重（timm模型名称: `vit_base_patch16_224.augreg_in1k`）。
 
 ### 2.2 基线方法
@@ -78,22 +80,22 @@ Transformer架构自提出以来，已成为自然语言处理（NLP）和计算
 ### 2.3 PEFT方法
 
 #### BitFit
-仅训练模型中的偏差项（bias terms），包括所有线性层和LayerNorm的bias参数。可训练参数约占0.08%，推理时无额外开销。
+BitFit的动机基于一个简单假设：预训练权重已经编码了丰富的通用知识，仅通过调整bias项即可将模型输出向任务特定方向偏移，无需修改权重矩阵本身。实现上仅训练所有线性层和LayerNorm的bias参数，可训练参数约占0.08%，推理时无额外开销。
 
 #### LoRA（Low-Rank Adaptation）
-在注意力层的QKV投影和输出投影中注入低秩分解矩阵。对于权重矩阵 $W_0 \in \mathbb{R}^{d \times k}$，LoRA将其更新表示为：
+LoRA的核心假设是模型在适应下游任务时的权重更新矩阵是低秩的——任务特定知识可以被压缩到一个远小于原始权重的子空间内。在注意力层的QKV投影和输出投影中注入低秩分解矩阵。对于权重矩阵 $W_0 \in \mathbb{R}^{d \times k}$，LoRA将其更新表示为：
 $$h = W_0 x + \frac{\alpha}{r} B A x$$
 
 其中 $A \in \mathbb{R}^{r \times k}$，$B \in \mathbb{R}^{d \times r}$，秩 $r \ll \min(d,k)$。本文采用 $r=8, \alpha=16$。可训练参数约占0.3-0.5%，推理时可通过合并矩阵消除开销。
 
 #### SSF（Scaling & Shifting Your Features）
-在每个操作（自注意力、MLP、LayerNorm）后插入可学习的缩放参数 $\gamma$ 和平移参数 $\beta$：
+SSF基于特征调制假设：预训练模型提取的特征图结构是通用的，但不同任务对这些特征的尺度和偏移有不同的要求。在每个操作（自注意力、MLP、LayerNorm）后插入可学习的缩放参数 $\gamma$ 和平移参数 $\beta$：
 $$y = \gamma \odot x + \beta$$
 
 可训练参数约占0.4%，推理时可通过重参数化合并到前一层权重中，实现零推理开销。
 
 #### AdaptFormer
-在MLP旁路插入并行的瓶颈适配器（bottleneck adapter），由下投影层 $W_{down} \in \mathbb{R}^{d \times \hat{d}}$、ReLU激活和上投影层 $W_{up} \in \mathbb{R}^{\hat{d} \times d}$ 组成：
+AdaptFormer的设计思路是不修改原始MLP的权重，而是在旁路添加轻量级瓶颈适配器学习任务特定的残差信息——瓶颈结构将高维特征压缩至低维空间再恢复，以极少参数捕获任务知识。具体由下投影层 $W_{down} \in \mathbb{R}^{d \times \hat{d}}$、ReLU激活和上投影层 $W_{up} \in \mathbb{R}^{\hat{d} \times d}$ 组成：
 $$y = \text{MLP}(x) + s \cdot W_{up} \cdot \text{ReLU}(W_{down} \cdot x)$$
 
 其中 $s$ 为缩放因子。本文采用 $\hat{d}=64, s=0.1$。可训练参数约占0.5-0.8%。
@@ -161,6 +163,21 @@ y &= g \odot \text{modulated} + (1 - g) \odot \text{base}
 | AdaptFormer | 5e-3 | 官方默认 |
 | SSF-Sparse | 5e-3 | 同SSF |
 | Gate-LoRA | 1e-3 | 同LoRA |
+
+**优化选择说明**：AdamW结合了Adam的自适应学习率和解耦权重衰减，在ViT微调中比SGD收敛更快且泛化更好。CosineAnnealingLR在训练过程中平滑降低学习率，避免后期大幅震荡。RandAugment(2,9)通过随机选取两种增强操作（幅度9）提供适度的数据多样性，防止小数据集上的过拟合。Early Stopping（patience=10）在验证损失连续10个epoch不下降时终止训练，既防止过拟合又节省计算资源。
+
+### 2.6 方法插入位置总览
+
+各PEFT方法在ViT-B/16 Transformer Block中的插入位置如下表所示：
+
+| 方法 | 插入位置 | 模块类型 | 每Block新增参数 |
+|------|---------|---------|---------------|
+| BitFit | 所有Linear + LayerNorm | —（仅启用bias训练）| ~1.2K |
+| LoRA | 自注意力QKV + 输出投影 | LoRALinear (A, B低秩) | ~36.9K |
+| SSF | 自注意力后 + MLP后 + LayerNorm后 | ScaleShift (γ, β) | ~27.6K |
+| AdaptFormer | MLP旁路 | Bottleneck (W_down, ReLU, W_up) | ~49.2K |
+| SSF-Sparse | 同SSF | SparseScaleShift (γ, β, gate) | ~41.5K |
+| Gate-LoRA | 自注意力QKV + 输出投影 | GateLoRALinear (A, B, γ, β, gate) | ~49.4K |
 
 ---
 

@@ -58,6 +58,8 @@ The main contributions of this paper are:
 
 ### 2.1 Pretrained Model
 
+![ViT Architecture and PEFT Method Insertion Points](../results/figures/architecture_overview.png)
+
 We use ViT-B/16 (Vision Transformer Base, patch size 16) as the backbone. The model contains 12 Transformer blocks, hidden dimension 768, 12 attention heads, and approximately 86M total parameters. ImageNet-21K pretrained weights are loaded from the `timm` library (model: `vit_base_patch16_224.augreg_in1k`).
 
 ### 2.2 Baseline Methods
@@ -71,22 +73,22 @@ Only the final classification head is trained (~2K parameters, ~0.1%). Serves as
 ### 2.3 PEFT Methods
 
 #### BitFit
-Trains only the bias terms of the model, including biases in all linear layers and LayerNorm layers. Trainable parameters ≈ 0.08%. Zero inference overhead.
+BitFit is motivated by a simple hypothesis: pretrained weights already encode rich general knowledge, and adjusting only the bias terms suffices to shift model outputs toward task-specific directions without modifying the weight matrices themselves. It trains only the bias terms of all linear and LayerNorm layers. Trainable parameters ≈ 0.08%. Zero inference overhead.
 
 #### LoRA (Low-Rank Adaptation)
-Injects low-rank decomposition matrices into the QKV projections and output projections of attention layers. For a weight matrix $W_0 \in \mathbb{R}^{d \times k}$, LoRA parameterizes the update as:
+LoRA is built on the hypothesis that weight update matrices during downstream adaptation are low-rank — task-specific knowledge can be compressed into a subspace far smaller than the original weights. It injects low-rank decomposition matrices into the QKV and output projections of attention layers. For a weight matrix $W_0 \in \mathbb{R}^{d \times k}$, LoRA parameterizes the update as:
 $$h = W_0 x + \frac{\alpha}{r} B A x$$
 
 where $A \in \mathbb{R}^{r \times k}$, $B \in \mathbb{R}^{d \times r}$, with rank $r \ll \min(d,k)$. We use $r=8, \alpha=16$. Trainable parameters ≈ 0.3-0.5%. LoRA matrices can be merged into the original weights at inference time, incurring zero runtime overhead.
 
 #### SSF (Scaling & Shifting Your Features)
-Inserts learnable scale parameters $\gamma$ and shift parameters $\beta$ after each operation (self-attention, MLP, LayerNorm):
+SSF is based on the feature modulation hypothesis: the structural patterns of pretrained features are universal, but different tasks demand different scales and offsets for these features. It inserts learnable scale ($\gamma$) and shift ($\beta$) parameters after each operation (self-attention, MLP, LayerNorm):
 $$y = \gamma \odot x + \beta$$
 
 Trainable parameters ≈ 0.4%. SSF can be re-parameterized into preceding layer weights for zero inference overhead.
 
 #### AdaptFormer
-Inserts a parallel bottleneck adapter alongside the MLP block, consisting of a down-projection layer $W_{down} \in \mathbb{R}^{d \times \hat{d}}$, ReLU activation, and an up-projection layer $W_{up} \in \mathbb{R}^{\hat{d} \times d}$:
+AdaptFormer's design philosophy is to avoid modifying the original MLP weights, instead adding a lightweight parallel bottleneck that learns task-specific residuals — the bottleneck compresses high-dimensional features into a low-dimensional space and recovers them, capturing task knowledge with minimal parameters. It consists of a down-projection layer $W_{down} \in \mathbb{R}^{d \times \hat{d}}$, ReLU activation, and an up-projection layer $W_{up} \in \mathbb{R}^{\hat{d} \times d}$:
 $$y = \text{MLP}(x) + s \cdot W_{up} \cdot \text{ReLU}(W_{down} \cdot x)$$
 
 where $s$ is a scaling factor. We use $\hat{d}=64, s=0.1$. Trainable parameters ≈ 0.5-0.8%.
@@ -153,6 +155,21 @@ Method-specific learning rates:
 | AdaptFormer | 5e-3 | Default |
 | SSF-Sparse | 5e-3 | Same as SSF |
 | Gate-LoRA | 1e-3 | Same as LoRA |
+
+**Optimization rationale**: AdamW combines Adam's adaptive learning rates with decoupled weight decay, converging faster than SGD on ViT fine-tuning with better generalization. CosineAnnealingLR smoothly decays the learning rate throughout training, avoiding large oscillations in later epochs. RandAugment(2,9) randomly selects two augmentation operations at magnitude 9, providing moderate data diversity to prevent overfitting on small datasets. Early Stopping (patience=10) terminates training when validation loss fails to improve for 10 consecutive epochs, preventing overfitting while saving computation. These settings are shared across all methods for fair comparison; only learning rate and batch size are method-specific.
+
+### 2.6 Method Insertion Points Overview
+
+The following table summarizes where each PEFT method inserts its trainable modules within a ViT-B/16 Transformer block:
+
+| Method | Insertion Points | Module Type | New Params/Block |
+|--------|-----------------|-------------|-----------------|
+| BitFit | All Linear + LayerNorm | — (bias training only) | ~1.2K |
+| LoRA | Attention QKV + Output Proj | LoRALinear (A, B) | ~36.9K |
+| SSF | After Attention + After MLP + After LayerNorm | ScaleShift (γ, β) | ~27.6K |
+| AdaptFormer | MLP bypass | Bottleneck (W_down, ReLU, W_up) | ~49.2K |
+| SSF-Sparse | Same as SSF | SparseScaleShift (γ, β, gate) | ~41.5K |
+| Gate-LoRA | Attention QKV + Output Proj | GateLoRALinear (A, B, γ, β, gate) | ~49.4K |
 
 ---
 
