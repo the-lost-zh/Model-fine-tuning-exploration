@@ -72,6 +72,8 @@ d.StanfordCars(root='./data', split='train', download=True)
 python scripts/convert_stanfordcars_v2.py
 ```
 
+**网络不稳定提示**：三个数据集均托管在境外服务器，国内或网络受限环境下自动下载可能较慢或中断。建议优先使用镜像源（如清华 TUNA、HF Mirror）下载原始压缩包后手动解压至 `./data/` 目录，或使用学术网环境下一次性下载。
+
 ## Usage
 
 ### Single experiment
