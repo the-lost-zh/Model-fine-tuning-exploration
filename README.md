@@ -45,24 +45,32 @@ Alternatively, download weights manually and pass `--pretrained_path /path/to/we
 
 ### Datasets
 
-Datasets are downloaded automatically via torchvision on first use:
+Datasets are downloaded automatically when running `main.py` for the first time:
 
 ```bash
+python main.py --method ssf --dataset cub200       # CUB200 auto-download
+python main.py --method ssf --dataset flowers102    # Flowers102 auto-download  
+python main.py --method ssf --dataset stanford_cars # StanfordCars auto-download
+```
+
+Or pre-download them manually:
+
+```bash
+# Flowers102 and StanfordCars (via torchvision)
 python -c "
 import torchvision.datasets as d
-d.CUB200(root='./data', train=True, download=True)
 d.Flowers102(root='./data', split='train', download=True)
 d.StanfordCars(root='./data', split='train', download=True)
 "
+
+# CUB200: auto-downloaded by our custom loader (src/data/cub200.py)
+# No manual download needed — just run main.py with --dataset cub200
 ```
 
-**Note**: StanfordCars original URL is broken. If automatic download fails, convert from HuggingFace parquet:
+**Note**: StanfordCars original URL may be broken. If automatic download fails, convert from HuggingFace parquet:
 ```bash
-# Download parquet files and convert to torchvision format
 python scripts/convert_stanfordcars_v2.py
 ```
-
-**Note**: CUB200 requires torchvision >= 0.21. If not available, the custom loader in `src/data/cub200.py` is used automatically.
 
 ## Usage
 
