@@ -12,8 +12,11 @@ from io import BytesIO
 from tqdm import tqdm
 import shutil
 
-PARQUET_DIR = "/data1/kongxinke/模型微调技术探索/data/stanford_cars_parquet"
-OUTPUT_DIR = "/data1/kongxinke/模型微调技术探索/data/stanford_cars"
+import sys
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
+PARQUET_DIR = os.path.join(PROJECT_DIR, "data", "stanford_cars_parquet")
+OUTPUT_DIR = os.path.join(PROJECT_DIR, "data", "stanford_cars")
 
 
 def convert_parquet(parquet_file, output_dir, global_idx, annotations):

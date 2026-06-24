@@ -3,7 +3,7 @@
 # Batch-based experiment runner
 # Writes jobs to a file, then processes in batches of 6
 # ============================================================
-cd /data1/kongxinke/模型微调技术探索
+cd "$(dirname "$0")/.."  # cd to project root
 
 export HTTP_PROXY=http://127.0.0.1:37890
 export HTTPS_PROXY=http://127.0.0.1:37890
